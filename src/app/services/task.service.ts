@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Task } from '../models/task.model';
 
 @Injectable({
@@ -7,29 +7,33 @@ import { Task } from '../models/task.model';
 })
 export class TaskService {
   private tasksSubject = new BehaviorSubject<Task[]>([]);
-
-  constructor() {
-    this.loadTasks();
-  }
-
-  getTasks() {
+  
+  getTasks(): Observable<Task[]> {
     return this.tasksSubject.asObservable();
   }
 
-  saveTask(task: Task) {
-    const tasks = this.tasksSubject.getValue();
-    const index = tasks.findIndex(t => t.id === task.id);
-    if (index > -1) {
-      tasks[index] = task;
-    } else {
-      tasks.push(task);
-    }
-    this.tasksSubject.next(tasks);
-    localStorage.setItem('tasks', JSON.stringify(tasks));
+  addTask(task: Task): void {
+    const currentTasks = this.tasksSubject.getValue();
+    this.tasksSubject.next([...currentTasks, task]);
+    this.saveTasks();
   }
 
-  loadTasks() {
-    const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-    this.tasksSubject.next(tasks);
+  updateTask(updatedTask: Task): void {
+    const tasks = this.tasksSubject.getValue();
+    const indexOfUpdated = tasks.findIndex(t => t.id === updatedTask.id);
+    tasks[indexOfUpdated] = updatedTask;
+    this.tasksSubject.next([...tasks]);
+    this.saveTasks();
+  }
+
+  private saveTasks(): void {
+    localStorage.setItem('tasks', JSON.stringify(this.tasksSubject.getValue()));
+  }
+
+  loadTasks(): void {
+    const tasks = localStorage.getItem('tasks');
+    if (tasks) {
+      this.tasksSubject.next(JSON.parse(tasks));
+    }
   }
 }
